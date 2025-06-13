@@ -451,6 +451,7 @@ class PortfolioTracker {
         } else {
             this.data.accounts.push({ id: 'acc' + Date.now(), name, type, created });
         }
+        this.saveData();
         this.showMessage(`${this.currentEditId ? '更新' : '新增'}成功`, 'success');
         this.hideModal();
         this.refreshUI();
@@ -515,6 +516,7 @@ class PortfolioTracker {
             }
             this.data.stocks.push({ symbol, ...data });
         }
+        this.saveData();
         this.showMessage(`${this.currentEditId ? '更新' : '新增'}成功`, 'success');
         this.hideModal();
         this.refreshUI();
@@ -581,6 +583,7 @@ class PortfolioTracker {
         } else {
             this.data.transactions.push({ id: 't' + Date.now(), ...data });
         }
+        this.saveData();
         this.showMessage(`${this.currentEditId ? '更新' : '新增'}成功`, 'success');
         this.hideModal();
         this.refreshUI();
@@ -641,6 +644,7 @@ class PortfolioTracker {
         } else {
             this.data.dividends.push({ id: 'd' + Date.now(), ...data });
         }
+        this.saveData();
         this.showMessage(`${this.currentEditId ? '更新' : '新增'}成功`, 'success');
         this.hideModal();
         this.refreshUI();
