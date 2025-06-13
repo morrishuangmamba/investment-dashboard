@@ -16,7 +16,10 @@ class PortfolioTracker {
     }
 
     init() {
-        this.loadSampleData();
+        this.loadData();
+        if (this.data.accounts.length === 0) {
+            this.loadSampleData();
+        }
         this.setupEventListeners();
         this.setupNavigation();
         this.refreshUI();
@@ -52,8 +55,23 @@ class PortfolioTracker {
         this.saveData();
     }
 
+    loadData() {
+        try {
+            const stored = localStorage.getItem('portfolioData');
+            if (stored) {
+                this.data = JSON.parse(stored);
+            }
+        } catch (e) {
+            console.error('讀取本地存檔失敗', e);
+        }
+    }
+
     saveData() {
-        console.log('數據已模擬保存', this.data);
+        try {
+            localStorage.setItem('portfolioData', JSON.stringify(this.data));
+        } catch (e) {
+            console.error('保存失敗', e);
+        }
     }
 
     // 重新整理所有UI元件
@@ -952,7 +970,7 @@ class PortfolioTracker {
         const allTransactionsForAccounts = this.data.transactions.filter(tx => selectedAccounts.includes(tx.accountId));
         const allDividendsForAccounts = this.data.dividends.filter(div => selectedAccounts.includes(div.accountId));
 
-        const realizedPnL = this._calculateFilteredRealizedPnL(allTransactionsForAccounts.filter(tx => tx.date >= startDate && tx.date <= endDate));
+        const realizedPnL = this._calculateFilteredRealizedPnL(allTransactionsForAccounts, startDate, endDate);
         const dividendIncome = allDividendsForAccounts.filter(div => div.date >= startDate && div.date <= endDate).reduce((sum, div) => sum + div.amount, 0);
         const { unrealizedPnL } = this._calculateFilteredUnrealizedPnL(selectedAccounts);
         const totalPnL = realizedPnL + unrealizedPnL + dividendIncome;
@@ -965,24 +983,30 @@ class PortfolioTracker {
         this.renderPnLChart(startDate, endDate, allTransactionsForAccounts, allDividendsForAccounts);
     }
     
-    _calculateFilteredRealizedPnL(transactions) {
+    _calculateFilteredRealizedPnL(transactions, startDate, endDate) {
         let realizedPnL = 0;
         const fifoQueues = {};
         const sortedTransactions = [...transactions].sort((a,b) => new Date(a.date) - new Date(b.date));
-        
+
         sortedTransactions.forEach(tx => {
             if (!fifoQueues[tx.symbol]) fifoQueues[tx.symbol] = [];
             if (tx.type === 'buy') {
                 fifoQueues[tx.symbol].push({ quantity: tx.quantity, price: tx.price });
             } else if (tx.type === 'sell') {
                 let sellQty = tx.quantity;
+                let pnlForTx = 0;
                 while(sellQty > 0 && fifoQueues[tx.symbol].length > 0) {
                     const buyLot = fifoQueues[tx.symbol][0];
                     const sellFromLot = Math.min(sellQty, buyLot.quantity);
-                    realizedPnL += sellFromLot * (tx.price - buyLot.price);
+                    if (new Date(tx.date) >= new Date(startDate) && new Date(tx.date) <= new Date(endDate)) {
+                        pnlForTx += sellFromLot * (tx.price - buyLot.price);
+                    }
                     buyLot.quantity -= sellFromLot;
                     if(buyLot.quantity === 0) fifoQueues[tx.symbol].shift();
                     sellQty -= sellFromLot;
+                }
+                if (new Date(tx.date) >= new Date(startDate) && new Date(tx.date) <= new Date(endDate)) {
+                    realizedPnL += pnlForTx;
                 }
             }
         });
@@ -1049,34 +1073,38 @@ class PortfolioTracker {
         if (this.charts.pnl) {
             this.charts.pnl.destroy();
         }
-        
+
         // 1. Pre-calculate daily changes within the date range
         const dailyChanges = {};
         const fifoQueues = {};
 
         const sortedTx = [...filteredTransactions].sort((a,b) => new Date(a.date) - new Date(b.date));
-        
-        sortedTx.forEach(tx => {
-            if (tx.date < startDate || tx.date > endDate) return;
 
-            if (tx.type === 'sell') {
-                if (!dailyChanges[tx.date]) dailyChanges[tx.date] = { realizedPnl: 0, dividends: 0 };
-                if (!fifoQueues[tx.symbol]) fifoQueues[tx.symbol] = [];
-                
-                let sellQty = tx.quantity;
-                let pnlForThisTx = 0;
-                while(sellQty > 0 && fifoQueues[tx.symbol].length > 0) {
-                    const buyLot = fifoQueues[tx.symbol][0];
-                    const sellFromLot = Math.min(sellQty, buyLot.quantity);
-                    pnlForThisTx += sellFromLot * (tx.price - buyLot.price);
-                    buyLot.quantity -= sellFromLot;
-                    if(buyLot.quantity === 0) fifoQueues[tx.symbol].shift();
-                    sellQty -= sellFromLot;
-                }
-                dailyChanges[tx.date].realizedPnl += pnlForThisTx;
-            } else { // tx.type === 'buy'
-                if (!fifoQueues[tx.symbol]) fifoQueues[tx.symbol] = [];
+        sortedTx.forEach(tx => {
+            if (!fifoQueues[tx.symbol]) fifoQueues[tx.symbol] = [];
+
+            if (tx.type === 'buy') {
                 fifoQueues[tx.symbol].push({ quantity: tx.quantity, price: tx.price });
+                return;
+            }
+
+            // sell transaction
+            let sellQty = tx.quantity;
+            let pnlForThisTx = 0;
+            while(sellQty > 0 && fifoQueues[tx.symbol].length > 0) {
+                const buyLot = fifoQueues[tx.symbol][0];
+                const sellFromLot = Math.min(sellQty, buyLot.quantity);
+                if (new Date(tx.date) >= new Date(startDate) && new Date(tx.date) <= new Date(endDate)) {
+                    pnlForThisTx += sellFromLot * (tx.price - buyLot.price);
+                }
+                buyLot.quantity -= sellFromLot;
+                if(buyLot.quantity === 0) fifoQueues[tx.symbol].shift();
+                sellQty -= sellFromLot;
+            }
+
+            if (new Date(tx.date) >= new Date(startDate) && new Date(tx.date) <= new Date(endDate)) {
+                if (!dailyChanges[tx.date]) dailyChanges[tx.date] = { realizedPnl: 0, dividends: 0 };
+                dailyChanges[tx.date].realizedPnl += pnlForThisTx;
             }
         });
 
