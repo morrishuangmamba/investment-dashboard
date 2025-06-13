@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投資組合追蹤系統</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>投資組合系統</h2>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#" class="nav-link active" data-tab="dashboard">總覽</a></li>
+                <li><a href="#" class="nav-link" data-tab="accounts">帳戶管理</a></li>
+                <li><a href="#" class="nav-link" data-tab="stocks">股票管理</a></li>
+                <li><a href="#" class="nav-link" data-tab="transactions">交易記錄</a></li>
+                <li><a href="#" class="nav-link" data-tab="dividends">股利記錄</a></li>
+                <li><a href="#" class="nav-link" data-tab="historical">歷史股價</a></li>
+                <li><a href="#" class="nav-link" data-tab="analysis">分析報告</a></li>
+                <li><a href="#" class="nav-link" data-tab="data">數據管理</a></li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <section id="dashboard" class="tab-content active">
+                <div class="page-header">
+                    <h1>投資組合總覽</h1>
+                    <p>您的投資數據概覽</p>
+                </div>
+                
+                <div class="dashboard-grid dashboard-grid--5-cols">
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>庫存總市值</h3>
+                            <div class="metric-value" id="totalMarketValue">NT$0</div>
+                        </div>
+                    </div>
+                     <div class="card">
+                        <div class="card__body">
+                            <h3>總損益</h3>
+                            <div class="metric-value" id="totalPnLOverall">NT$0</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>未實現損益</h3>
+                            <div class="metric-value" id="totalUnrealizedPnL">NT$0</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>已實現損益</h3>
+                            <div class="metric-value" id="totalRealizedPnL">NT$0</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>累積配息</h3>
+                            <div class="metric-value" id="totalDividends">NT$0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-charts-grid">
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>持股分佈 (依市值)</h3>
+                            <div class="chart-container">
+                                <canvas id="portfolioChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="card">
+                        <div class="card__body">
+                            <h3>股票 / 債券比例</h3>
+                             <div class="chart-container">
+                                <canvas id="stockBondRatioChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mt-24">
+                    <div class="card__body">
+                        <h3>個別股票損益</h3>
+                        <div class="table-responsive">
+                            <table class="data-table" id="individualStockStatsTable">
+                                <thead>
+                                    <tr>
+                                        <th>股票</th>
+                                        <th>庫存市值</th>
+                                        <th>未實現損益</th>
+                                        <th>已實現損益</th>
+                                        <th>累積配息</th>
+                                        <th>總損益</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <section id="accounts" class="tab-content">
+                <div class="page-header">
+                    <h1>帳戶管理</h1>
+                    <div class="header-actions">
+                        <button class="btn btn--primary" data-action="add-account">新增帳戶</button>
+                        <input type="file" id="accountCsvFile" accept=".csv" style="display: none;">
+                        <button class="btn btn--secondary" data-action="import-account-csv">匯入CSV</button>
+                        <button class="btn btn--outline" data-action="export-account-csv">匯出CSV</button>
+                        <button class="btn btn--outline" data-action="clear-accounts" style="color: var(--color-error); border-color: var(--color-error);">清除所有</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card__body">
+                        <div class="table-responsive">
+                            <table class="data-table" id="accountsTable">
+                                <thead>
+                                    <tr>
+                                        <th>帳戶名稱</th>
+                                        <th>帳戶類型</th>
+                                        <th>創建日期</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="stocks" class="tab-content">
+                <div class="page-header">
+                    <h1>股票管理</h1>
+                    <div class="header-actions">
+                        <button class="btn btn--primary" data-action="add-stock">新增股票</button>
+                        <input type="file" id="stockCsvFile" accept=".csv" style="display: none;">
+                        <button class="btn btn--secondary" data-action="import-stock-csv">匯入CSV</button>
+                        <button class="btn btn--outline" data-action="export-stock-csv">匯出CSV</button>
+                        <button class="btn btn--outline" data-action="clear-stocks" style="color: var(--color-error); border-color: var(--color-error);">清除所有</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card__body">
+                        <div class="table-responsive">
+                            <table class="data-table" id="stocksTable">
+                                <thead>
+                                    <tr>
+                                        <th>股票代號</th>
+                                        <th>股票名稱</th>
+                                        <th>分類</th>
+                                        <th>目前價格</th>
+                                        <th>貨幣</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="transactions" class="tab-content">
+                <div class="page-header">
+                    <h1>交易記錄</h1>
+                    <div class="header-actions">
+                        <button class="btn btn--primary" data-action="add-transaction">新增交易</button>
+                        <input type="file" id="transactionCsvFile" accept=".csv" style="display: none;">
+                        <button class="btn btn--secondary" data-action="import-transaction-csv">匯入CSV</button>
+                        <button class="btn btn--outline" data-action="export-transaction-csv">匯出CSV</button>
+                        <button class="btn btn--outline" data-action="clear-transactions" style="color: var(--color-error); border-color: var(--color-error);">清除所有</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card__body">
+                        <div class="table-responsive">
+                            <table class="data-table" id="transactionsTable">
+                                <thead>
+                                    <tr>
+                                        <th>日期</th>
+                                        <th>帳戶</th>
+                                        <th>股票代號</th>
+                                        <th>類型</th>
+                                        <th>數量</th>
+                                        <th>價格</th>
+                                        <th>總額</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="dividends" class="tab-content">
+                <div class="page-header">
+                    <h1>股利記錄</h1>
+                    <div class="header-actions">
+                        <button class="btn btn--primary" data-action="add-dividend">新增股利</button>
+                        <input type="file" id="dividendCsvFile" accept=".csv" style="display: none;">
+                        <button class="btn btn--secondary" data-action="import-dividend-csv">匯入CSV</button>
+                        <button class="btn btn--outline" data-action="export-dividend-csv">匯出CSV</button>
+                        <button class="btn btn--outline" data-action="clear-dividends" style="color: var(--color-error); border-color: var(--color-error);">清除所有</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card__body">
+                        <div class="table-responsive">
+                            <table class="data-table" id="dividendsTable">
+                                <thead>
+                                    <tr>
+                                        <th>日期</th>
+                                        <th>帳戶</th>
+                                        <th>股票代號</th>
+                                        <th>股利金額</th>
+                                        <th>股利類型</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="historical" class="tab-content">
+                <div class="page-header">
+                    <h1>歷史股價管理</h1>
+                    <div class="header-actions">
+                        <input type="file" id="historicalCsvFile" accept=".csv" style="display: none;">
+                        <button class="btn btn--primary" data-action="import-historical-csv">匯入歷史股價CSV</button>
+                        <button class="btn btn--outline" data-action="export-historical-csv">匯出歷史股價</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card__body">
+                        <div class="historical-summary" id="historicalSummary">
+                            <p>歷史股價數據概覽：</p>
+                            <div id="historicalStats"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="analysis" class="tab-content">
+                <div class="page-header">
+                    <h1>分析報告</h1>
+                </div>
+
+                <div class="analysis-filters">
+                    <div class="card">
+                        <div class="card__body">
+                            <div class="filter-grid">
+                                <div class="form-group">
+                                    <label class="form-label">開始日期</label>
+                                    <input type="date" class="form-control" id="startDate">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">結束日期</label>
+                                    <input type="date" class="form-control" id="endDate">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">選擇帳戶</label>
+                                    <select class="form-control" id="accountFilter" multiple>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-results">
+                    <div class="metrics-grid">
+                        <div class="card">
+                            <div class="card__body">
+                                <h3>已實現損益</h3>
+                                <div class="metric-value" id="realizedPnL">$0</div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card__body">
+                                <h3>未實現損益</h3>
+                                <div class="metric-value" id="unrealizedPnL">$0</div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card__body">
+                                <h3>累積配息</h3>
+                                <div class="metric-value" id="totalDividendIncome">$0</div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card__body">
+                                <h3>總損益</h3>
+                                <div class="metric-value" id="totalPnL">$0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chart-container mt-24">
+                        <div class="card">
+                            <div class="card__body">
+                                <h3>損益趨勢圖</h3>
+                                <canvas id="pnlChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="data" class="tab-content">
+                <div class="page-header">
+                    <h1>數據管理</h1>
+                </div>
+
+                <div class="data-management-grid">
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>數據備份</h3>
+                            <p>匯出完整的投資數據為JSON格式</p>
+                            <button class="btn btn--primary btn--full-width" data-action="export-data">匯出數據備份</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>數據還原</h3>
+                            <p>從JSON檔案還原數據</p>
+                            <input type="file" id="importDataFile" accept=".json" style="display: none;">
+                            <button class="btn btn--secondary btn--full-width" data-action="import-data">匯入數據備份</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>數據清除</h3>
+                            <p>清除所有本地數據</p>
+                            <button class="btn btn--outline btn--full-width" data-action="clear-data">清除所有數據</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-24">
+                    <div class="card__body">
+                        <h3>數據統計</h3>
+                        <div id="dataStats"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">標題</h2>
+                <button class="modal-close" data-action="close-modal">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
